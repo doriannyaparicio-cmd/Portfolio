@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTech B | Luminária Inteligente com Sensor PIR</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0a0612',
+                            card: '#150d2a',
+                            border: '#2a1b4e',
+                            purple: '#8b5cf6',
+                            neon: '#a855f7',
+                            cyan: '#06b6d4',
+                            magenta: '#ec4899',
+                            glow: '#d8b4fe'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'Courier New', 'monospace']
+                    },
+                    boxShadow: {
+                        'neon-purple': '0 0 25px -5px rgba(168, 85, 247, 0.4)',
+                        'neon-cyan': '0 0 25px -5px rgba(6, 182, 212, 0.4)',
+                        'neon-magenta': '0 0 25px -5px rgba(236, 72, 153, 0.4)',
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0a0612;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        /* Ambient Glow Backgrounds */
+        .bg-glow-purple {
+            background: radial-gradient(circle at 50% 20%, rgba(168, 85, 247, 0.15) 0%, rgba(10, 6, 18, 0) 70%);
+        }
+        .bg-glow-cyan {
+            background: radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.12) 0%, rgba(10, 6, 18, 0) 70%);
+        }
+
+        /* Glassmorphism Styles */
+        .glass-panel {
+            background: rgba(21, 13, 42, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+
+        .glass-card {
+            background: rgba(26, 16, 47, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(168, 85, 247, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(168, 85, 247, 0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px -10px rgba(168, 85, 247, 0.3);
+        }
+
+        .glass-input {
+            background: rgba(10, 6, 18, 0.7);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #fff;
+        }
+
+        .glass-input:focus {
+            border-color: #a855f7;
+            outline: none;
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0612;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a1b4e;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a855f7;
+        }
+
+        /* LED Animation Effects */
+        @keyframes pulseGlow {
+            0%, 100% { filter: drop-shadow(0 0 15px #facc15); opacity: 1; }
+            50% { filter: drop-shadow(0 0 35px #facc15); opacity: 0.85; }
+        }
+        .led-active {
+            animation: pulseGlow 1.5s infinite ease-in-out;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        .scanline-effect {
+            position: relative;
+            overflow: hidden;
+        }
+        .scanline-effect::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, transparent 50%, rgba(168, 85, 247, 0.05) 51%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="relative min-h-screen text-slate-100 bg-glow-purple">
+
+    <!-- TOP NAVIGATION -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-brand-border/40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-neon to-brand-cyan flex items-center justify-center shadow-neon-purple">
+                    <i class="fa-solid fa-microchip text-white text-xl"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-brand-neon via-purple-300 to-brand-cyan">EcoTech B</span>
+                    <span class="block text-xs text-purple-300/70 font-mono">2º Ano B • Projeto Robótica</span>
+                </div>
+            </div>
+
+            <!-- Desktop Nav Links -->
+            <nav class="hidden md:flex items-center space-x-1 lg:space-x-2 text-sm font-medium text-slate-300">
+                <a href="#ideia" class="px-3 py-2 rounded-lg hover:text-brand-neon hover:bg-brand-purple/10 transition">A Ideia</a>
+                <a href="#planejamento" class="px-3 py-2 rounded-lg hover:text-brand-neon hover:bg-brand-purple/10 transition">Planejamento</a>
+                <a href="#montagem" class="px-3 py-2 rounded-lg hover:text-brand-neon hover:bg-brand-purple/10 transition">Montagem</a>
+                <a href="#simulador" class="px-3 py-2 rounded-lg hover:text-brand-neon hover:bg-brand-purple/10 transition">Simulador & Código</a>
+                <a href="#testes" class="px-3 py-2 rounded-lg hover:text-brand-neon hover:bg-brand-purple/10 transition">Testes</a>
+                <a href="#aprendizados" class="px-3 py-2 rounded-lg hover:text-brand-neon hover:bg-brand-purple/10 transition">Aprendizados</a>
+            </nav>
+
+            <!-- Quick Action Button -->
+            <a href="#simulador" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-neon to-purple-600 hover:from-purple-500 hover:to-brand-neon text-white font-medium shadow-neon-purple transition duration-300 text-sm">
+                <i class="fa-solid fa-bolt"></i> Testar Simulador
+            </a>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="relative pt-12 pb-20 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel border border-brand-neon/40 text-brand-glow text-xs uppercase tracking-widest font-semibold mb-6 shadow-neon-purple">
+                    <i class="fa-solid fa-leaf text-green-400"></i> Automação Sustentável & Robótica
+                </div>
+                <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">
+                    Luminária Inteligente com <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-neon via-purple-300 to-brand-cyan">Sensor PIR</span>
+                </h1>
+                <p class="text-lg text-slate-300 leading-relaxed font-light">
+                    Protótipo de iluminação pública e escolar automatizada desenvolvido pela equipe <strong class="text-brand-glow">EcoTech B</strong> para erradicar o desperdício de energia elétrica de forma inteligente e acessível.
+                </p>
+            </div>
+
+            <!-- TEAM MEMBERS CARDS -->
+            <div class="glass-panel p-6 sm:p-8 rounded-3xl border border-brand-border/60 shadow-glass max-w-5xl mx-auto">
+                <div class="flex items-center justify-between flex-wrap gap-4 mb-6 border-b border-brand-border/50 pb-4">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-users text-brand-neon text-2xl"></i>
+                        <h2 class="text-xl font-bold text-white">Identificação da Equipe</h2>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs font-mono text-purple-300">
+                        <span class="bg-brand-card px-3 py-1.5 rounded-lg border border-brand-border"><i class="fa-regular fa-calendar text-brand-cyan mr-1"></i> Início: 10/09/2026</span>
+                        <span class="bg-brand-card px-3 py-1.5 rounded-lg border border-brand-border"><i class="fa-solid fa-graduation-cap text-brand-magenta mr-1"></i> Turma: 2º Ano B</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                    <!-- Integrante 1 -->
+                    <div class="glass-card p-4 rounded-2xl text-center border border-purple-500/20">
+                        <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-purple-900/50 flex items-center justify-center text-brand-neon font-bold text-lg border border-brand-neon/40">
+                            08
+                        </div>
+                        <h3 class="font-semibold text-sm text-white">Daniela</h3>
+                        <span class="text-xs text-slate-400">Integrante</span>
+                    </div>
+
+                    <!-- Integrante 2 -->
+                    <div class="glass-card p-4 rounded-2xl text-center border border-purple-500/20">
+                        <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-purple-900/50 flex items-center justify-center text-brand-neon font-bold text-lg border border-brand-neon/40">
+                            09
+                        </div>
+                        <h3 class="font-semibold text-sm text-white">Dariangelys</h3>
+                        <span class="text-xs text-slate-400">Integrante</span>
+                    </div>
+
+                    <!-- Integrante 3 -->
+                    <div class="glass-card p-4 rounded-2xl text-center border border-purple-500/20">
+                        <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-purple-900/50 flex items-center justify-center text-brand-neon font-bold text-lg border border-brand-neon/40">
+                            10
+                        </div>
+                        <h3 class="font-semibold text-sm text-white">Dorianny</h3>
+                        <span class="text-xs text-slate-400">Integrante</span>
+                    </div>
+
+                    <!-- Integrante 4 -->
+                    <div class="glass-card p-4 rounded-2xl text-center border border-purple-500/20">
+                        <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-purple-900/50 flex items-center justify-center text-brand-neon font-bold text-lg border border-brand-neon/40">
+                            25
+                        </div>
+                        <h3 class="font-semibold text-sm text-white">Nelimar</h3>
+                        <span class="text-xs text-slate-400">Integrante</span>
+                    </div>
+
+                    <!-- Integrante 5 (EDITÁVEL) -->
+                    <div class="glass-card p-4 rounded-2xl text-center border border-brand-cyan/40 bg-brand-cyan/5">
+                        <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-cyan-900/40 flex items-center justify-center text-brand-cyan font-bold text-lg border border-brand-cyan/40">
+                            <i class="fa-solid fa-user-plus text-xs"></i>
+                        </div>
+                        <input type="text" id="member5-name" placeholder="Nome & Nº" class="w-full text-center text-xs bg-transparent border-b border-brand-cyan/50 text-white focus:outline-none focus:border-brand-cyan font-semibold mb-1" value="Integrante Nº 5">
+                        <span class="text-[10px] text-brand-cyan">Clique para editar</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SEÇÃO 2: A IDEIA & SUSTENTABILIDADE -->
+    <section id="ideia" class="py-16 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-white flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-lightbulb text-brand-neon"></i> 2. Nossa Ideia & Contexto
+                </h2>
+                <p class="text-slate-400 mt-2">Como identificamos o desafio e idealizamos a solução sustentável</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1: O Problema -->
+                <div class="glass-card p-6 rounded-3xl border-l-4 border-l-rose-500">
+                    <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-2xl mb-4">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">O Problema Identificado</h3>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        O frequente desperdício de energia elétrica em salas de aula e corredores da escola, mantidos com luzes acesas continuamente mesmo na ausência de estudantes ou professores. Isso impacta as contas elétricas e o meio ambiente.
+                    </p>
+                </div>
+
+                <!-- Card 2: A Solução -->
+                <div class="glass-card p-6 rounded-3xl border-l-4 border-l-brand-neon">
+                    <div class="w-12 h-12 rounded-2xl bg-brand-neon/10 text-brand-neon flex items-center justify-center text-2xl mb-4">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Nossa Ideia</h3>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        Construir um protótipo funcional de luminária inteligente acionada por sensor de presença PIR. As luzes acendem instantaneamente ao detectar movimento e apagam autonomamente quando o local fica vazio.
+                    </p>
+                </div>
+
+                <!-- Card 3: O Objetivo -->
+                <div class="glass-card p-6 rounded-3xl border-l-4 border-l-brand-cyan">
+                    <div class="w-12 h-12 rounded-2xl bg-brand-cyan/10 text-brand-cyan flex items-center justify-center text-2xl mb-4">
+                        <i class="fa-solid fa-bullseye"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Objetivo Principal</h3>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        Proporcionar economia de energia automatizada, gerando sustentabilidade prática, conscientização ambiental e diminuição expressiva de custos na instituição escolar.
+                    </p>
+                </div>
+            </div>
+
+            <!-- SUBSECTION: SUPORTE IA -->
+            <div class="mt-8 glass-panel p-6 sm:p-8 rounded-3xl border border-brand-purple/30 bg-gradient-to-br from-brand-card to-purple-950/40">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-brand-neon/20 border border-brand-neon/50 text-brand-neon flex-shrink-0 flex items-center justify-center text-2xl shadow-neon-purple">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <h3 class="text-lg font-bold text-white">Utilizamos Inteligência Artificial para pensar na ideia?</h3>
+                            <span class="px-3 py-1 bg-green-500/20 text-green-300 text-xs font-bold rounded-full border border-green-500/40"><i class="fa-solid fa-check mr-1"></i> SIM</span>
+                        </div>
+                        <div class="glass-card p-4 rounded-xl border border-brand-border/60">
+                            <p class="text-xs font-mono text-purple-300 mb-1"><i class="fa-solid fa-comment-dots mr-1"></i> Pergunta formulada pelo grupo para a IA:</p>
+                            <p class="text-sm italic text-slate-200 font-serif">"Qual protótipo barato eu posso fazer para economizar energia na minha escola usando sensor de presença?"</p>
+                        </div>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            <strong class="text-brand-glow">Como a IA ajudou:</strong> A IA sugeriu alternativas sustentáveis de baixo custo baseadas em Arduino UNO e explicou o funcionamento prático e a lógica do sensor infravermelho de presença PIR.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SEÇÃO 3: PLANEJAMENTO & COMPONENTES -->
+    <section id="planejamento" class="py-16 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-white flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-compass-drafting text-brand-cyan"></i> 3. Planejamento & Componentes
+                </h2>
+                <p class="text-slate-400 mt-2">Mapeamento de recursos e estrutura conceitual do protótipo</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <!-- Tabela de Componentes -->
+                <div class="lg:col-span-7 glass-panel p-6 rounded-3xl border border-brand-border">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-stacked text-brand-neon"></i> Componentes Selecionados
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="text-xs text-purple-300 uppercase bg-brand-card/80 border-b border-brand-border">
+                                <tr>
+                                    <th class="px-4 py-3 rounded-l-xl">Componente</th>
+                                    <th class="px-4 py-3 rounded-r-xl">Finalidade no Projeto</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand-border/40">
+                                <tr class="hover:bg-brand-purple/10 transition">
+                                    <td class="px-4 py-3 font-semibold text-white flex items-center gap-2">
+                                        <i class="fa-microchip text-brand-neon"></i> Arduino UNO
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-300">Cérebro do sistema: processa leituras e controla o acionamento da luz.</td>
+                                </tr>
+                                <tr class="hover:bg-brand-purple/10 transition">
+                                    <td class="px-4 py-3 font-semibold text-white flex items-center gap-2">
+                                        <i class="fa-eye text-brand-cyan"></i> Sensor PIR
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-300">Detecta radiação infravermelha/movimento de pessoas no ambiente.</td>
+                                </tr>
+                                <tr class="hover:bg-brand-purple/10 transition">
+                                    <td class="px-4 py-3 font-semibold text-white flex items-center gap-2">
+                                        <i class="fa-lightbulb text-yellow-400"></i> LED / Módulo Relé
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-300">Simula a luminária principal da sala acendendo e apagando.</td>
+                                </tr>
+                                <tr class="hover:bg-brand-purple/10 transition">
+                                    <td class="px-4 py-3 font-semibold text-white flex items-center gap-2">
+                                        <i class="fa-box text-amber-600"></i> Caixa de Papelão
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-300">Estrutura física e maquete simulando a maquete de sala de aula.</td>
+                                </tr>
+                                <tr class="hover:bg-brand-purple/10 transition">
+                                    <td class="px-4 py-3 font-semibold text-white flex items-center gap-2">
+                                        <i class="fa-plug text-slate-400"></i> Jumpers & Resistor
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-300">Conexões elétricas e proteção dos terminais do Arduino.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Lógica de Funcionamento -->
+                    <div class="mt-6 p-4 rounded-2xl bg-purple-950/30 border border-brand-purple/30">
+                        <h4 class="font-semibold text-brand-glow text-sm mb-1"><i class="fa-solid fa-gears mr-1"></i> Como imaginamos que o protótipo funciona:</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            O sensor PIR monitora continuamente a maquete da sala de aula. Ao detectar presença, ele envia um sinal ao Arduino, que imediatamente liga o LED/Lâmpada. Quando cessa o movimento por um período (ex.: 15 segundos), o controlador desliga automaticamente a iluminação.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Esboço / Desenho do Planejamento -->
+                <div class="lg:col-span-5 glass-panel p-6 rounded-3xl border border-brand-border flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-pen-ruler text-brand-magenta"></i> Desenho e Esboço
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-4">Registro visual da ideia planejada antes da montagem física.</p>
+                        
+                        <div id="sketch-container" class="relative rounded-2xl overflow-hidden border-2 border-dashed border-brand-purple/40 bg-brand-card/60 aspect-video flex flex-col items-center justify-center text-center p-4 group">
+                            <img id="sketch-img" src="https://placehold.co/600x400/150d2a/a855f7?text=Esboco+da+Maquete+EcoTech+B" alt="Esboço do Projeto" class="w-full h-full object-cover rounded-xl">
+                            <div class="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-4">
+                                <i class="fa-solid fa-cloud-arrow-up text-3xl text-brand-neon"></i>
+                                <span class="text-xs text-white font-medium">Trocar Imagem do Esboço</span>
+                                <label class="cursor-pointer px-3 py-1.5 bg-brand-neon text-white rounded-lg text-xs font-semibold hover:bg-purple-600 transition">
+                                    Selecionar Foto
+                                    <input type="file" accept="image/*" class="hidden" onchange="uploadImage(event, 'sketch-img')">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="text-[11px] text-slate-500 text-center mt-3"><i class="fa-solid fa-camera mr-1"></i> Você pode fazer o upload da foto real do seu desenho</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SEÇÃO 4: MÃOS À OBRA - MONTAGEM -->
+    <section id="montagem" class="py-16 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-white flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-screwdrivers text-brand-neon"></i> 4. Mãos à Obra — Primeira Montagem
+                </h2>
+                <p class="text-slate-400 mt-2">Conectando componentes, organizando os fios e montando a estrutura física</p>
+            </div>
+
+            <!-- Upload Galeria Montagem -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Foto 1 -->
+                <div class="glass-panel p-5 rounded-3xl border border-brand-border">
+                    <div class="relative aspect-square rounded-2xl overflow-hidden mb-4 bg-brand-card border border-brand-border group">
+                        <img id="montagem-1-img" src="https://placehold.co/400x400/1a102f/06b6d4?text=Montagem+Arduino+%2B+PIR" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-brand-dark/80 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2">
+                            <i class="fa-solid fa-camera text-2xl text-brand-cyan"></i>
+                            <label class="cursor-pointer px-3 py-1 bg-brand-cyan text-slate-900 font-bold rounded-lg text-xs">
+                                Enviar Foto 1
+                                <input type="file" accept="image/*" class="hidden" onchange="uploadImage(event, 'montagem-1-img')">
+                            </label>
+                        </div>
+                    </div>
+                    <span class="text-xs font-mono text-brand-cyan">FOTO 01</span>
+                    <textarea class="w-full glass-input text-xs p-2 rounded-xl mt-2 resize-none h-16" placeholder="Descreva o que está acontecendo nesta foto...">Conexão dos Jumpers do sensor PIR nas entradas do Arduino e protoboard.</textarea>
+                </div>
+
+                <!-- Foto 2 -->
+                <div class="glass-panel p-5 rounded-3xl border border-brand-border">
+                    <div class="relative aspect-square rounded-2xl overflow-hidden mb-4 bg-brand-card border border-brand-border group">
+                        <img id="montagem-2-img" src="https://placehold.co/400x400/1a102f/a855f7?text=Montagem+da+Maquete" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-brand-dark/80 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2">
+                            <i class="fa-solid fa-camera text-2xl text-brand-neon"></i>
+                            <label class="cursor-pointer px-3 py-1 bg-brand-neon text-white font-bold rounded-lg text-xs">
+                                Enviar Foto 2
+                                <input type="file" accept="image/*" class="hidden" onchange="uploadImage(event, 'montagem-2-img')">
+                            </label>
+                        </div>
+                    </div>
+                    <span class="text-xs font-mono text-brand-neon">FOTO 02</span>
+                    <textarea class="w-full glass-input text-xs p-2 rounded-xl mt-2 resize-none h-16" placeholder="Descreva o que está acontecendo nesta foto...">Fixação dos componentes dentro da caixa de papelão simulando a sala de aula.</textarea>
+                </div>
+
+                <!-- Foto 3 -->
+                <div class="glass-panel p-5 rounded-3xl border border-brand-border">
+                    <div class="relative aspect-square rounded-2xl overflow-hidden mb-4 bg-brand-card border border-brand-border group">
+                        <img id="montagem-3-img" src="https://placehold.co/400x400/1a102f/ec4899?text=Circuito+Pronto" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-brand-dark/80 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2">
+                            <i class="fa-solid fa-camera text-2xl text-brand-magenta"></i>
+                            <label class="cursor-pointer px-3 py-1 bg-brand-magenta text-white font-bold rounded-lg text-xs">
+                                Enviar Foto 3
+                                <input type="file" accept="image/*" class="hidden" onchange="uploadImage(event, 'montagem-3-img')">
+                            </label>
+                        </div>
+                    </div>
+                    <span class="text-
